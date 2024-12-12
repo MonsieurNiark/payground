@@ -1,0 +1,4 @@
+spring:
+  application.name: Payground
+  r2dbc:
+    url: 'r2dbc:h2:mem:///paygrounddb;Mode=MySQL'

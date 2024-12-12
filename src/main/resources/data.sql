@@ -1,0 +1,6 @@
+INSERT INTO payments VALUES (1, 'EUR', 'IN_PROGRESS', 'CREDIT_CARD', 35);
+INSERT INTO payments VALUES (2, 'EUR', 'IN_PROGRESS', 'PAYPAL', 10);
+
+INSERT INTO orders VALUES (1,'Chaussettes','CHO7', 10, 2,1);
+INSERT INTO orders VALUES (2,'Caleçon','KLESSON', 3, 5,1);
+INSERT INTO orders VALUES (3,'Pantalon','PONTALONG', 2, 5,2);
