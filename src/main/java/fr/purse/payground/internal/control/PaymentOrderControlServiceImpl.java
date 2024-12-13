@@ -9,10 +9,10 @@ import fr.purse.payground.dto.request.RequestPaymentDto;
 import fr.purse.payground.dto.request.RequestUpdatePaymentStatusDto;
 import fr.purse.payground.dto.response.ResponseOrderDto;
 import fr.purse.payground.dto.response.ResponsePaymentDto;
+import fr.purse.payground.exception.ForbiddenException;
+import fr.purse.payground.exception.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -55,12 +55,11 @@ public class PaymentOrderControlServiceImpl implements PaymentOrderControlServic
         return Flux.fromIterable(requestPaymentDto.getOrdersId()).flatMap(orderId -> {
             return orderControlService.findOrderById(orderId)
                     // Check if order exists
-                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                            "Order with " + "ID " + orderId + " not found")))
+                    .switchIfEmpty(Mono.error(new NotFoundException("Order with " + "ID " + orderId + " not found")))
                     .flatMap(orderDto -> {
                         // Check if order doesn't already have a payment
                         if (orderDto.getPaymentId() != null) {
-                            return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "An order is " +
+                            return Mono.error(new ForbiddenException("ID Order " + orderDto.getId() + " is " +
                                     "already in payment"));
                         }
                         return Mono.just(orderDto);
@@ -83,10 +82,9 @@ public class PaymentOrderControlServiceImpl implements PaymentOrderControlServic
     @Override
     public Mono<ResponsePaymentDto> updatePaymentStatus(RequestUpdatePaymentStatusDto requestUpdatePaymentStatusDto) {
         return paymentControlService.findPaymentById(requestUpdatePaymentStatusDto.getPaymentId())
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found")))
+                .switchIfEmpty(Mono.error(new NotFoundException("Payment not found")))
                 .flatMap(paymentDto -> paymentControlService.updatePaymentStatus(requestUpdatePaymentStatusDto.getPaymentId(), requestUpdatePaymentStatusDto.getStatus())
-                        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "Error during " + "update."))))
+                        .switchIfEmpty(Mono.error(new ForbiddenException("Error during payment update."))))
                 .flatMap(paymentDto -> {
                     // Retrieve orders
                     return orderControlService.findOrdersByPaymentId(paymentDto.getId()).collectList()

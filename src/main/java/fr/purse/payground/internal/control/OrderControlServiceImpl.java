@@ -3,12 +3,11 @@ package fr.purse.payground.internal.control;
 import fr.purse.payground.control.OrderControlService;
 import fr.purse.payground.dto.OrderDto;
 import fr.purse.payground.dto.request.RequestOrderDto;
+import fr.purse.payground.exception.NotFoundException;
 import fr.purse.payground.mapper.OrderMapper;
 import fr.purse.payground.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -33,8 +32,7 @@ public class OrderControlServiceImpl implements OrderControlService {
 
     @Override
     public Mono<OrderDto> findOrderById(final int id) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found")))
+        return orderRepository.findById(id).switchIfEmpty(Mono.error(new NotFoundException("Order not found")))
                 .map(ORDER_MAPPER::toDto);
     }
 

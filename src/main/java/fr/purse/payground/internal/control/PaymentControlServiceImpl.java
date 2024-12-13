@@ -6,12 +6,11 @@ import fr.purse.payground.dto.PaymentDto;
 import fr.purse.payground.dto.PaymentStatusEnum;
 import fr.purse.payground.dto.request.RequestPaymentDto;
 import fr.purse.payground.entity.Payment;
+import fr.purse.payground.exception.NotFoundException;
 import fr.purse.payground.mapper.PaymentMapper;
 import fr.purse.payground.repository.PaymentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -39,8 +38,7 @@ public class PaymentControlServiceImpl implements PaymentControlService {
 
     @Override
     public Mono<PaymentDto> findPaymentById(final int id) {
-        return paymentRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found")))
+        return paymentRepository.findById(id).switchIfEmpty(Mono.error(new NotFoundException("Payment not found")))
                 .map(PAYMENT_MAPPER::toDto);
     }
 
