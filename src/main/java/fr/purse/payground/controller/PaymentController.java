@@ -10,6 +10,7 @@ import fr.purse.payground.dto.request.RequestUpdatePaymentStatusDto;
 import fr.purse.payground.dto.response.ResponsePaymentDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,7 +51,7 @@ public class PaymentController {
      * @param paymentId the payment id
      * @return a Mono of {@link ResponsePaymentDto}
      */
-    @GetMapping("/{paymentId}")
+    @GetMapping(path = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> findPaymentById(@PathVariable int paymentId) {
         Mono<PaymentDto> paymentDtoMono = this.paymentControlService.findPaymentById(paymentId);
         return paymentDtoMono.flatMap(paymentDto -> {
@@ -69,7 +70,7 @@ public class PaymentController {
      * @param requestPaymentDto the body of the request
      * @return a {@link ResponsePaymentDto}
      */
-    @PostMapping
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> createPayment(@RequestBody RequestPaymentDto requestPaymentDto) {
         return Flux.fromIterable(requestPaymentDto.getOrdersId()).flatMap(orderId -> {
             return orderControlService.findOrderById(orderId)
@@ -106,7 +107,7 @@ public class PaymentController {
      * @param requestUpdatePaymentStatusDto the payment payload
      * @return a Mono of {@link ResponsePaymentDto}
      */
-    @PutMapping
+    @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> updatePaymentStatus(@RequestBody RequestUpdatePaymentStatusDto requestUpdatePaymentStatusDto) {
         return paymentControlService.findPaymentById(requestUpdatePaymentStatusDto.getPaymentId())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found")))
