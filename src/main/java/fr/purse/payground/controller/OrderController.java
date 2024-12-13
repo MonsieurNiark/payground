@@ -2,9 +2,8 @@ package fr.purse.payground.controller;
 
 
 import fr.purse.payground.control.OrderControlService;
-import fr.purse.payground.control.PaymentControlService;
+import fr.purse.payground.control.PaymentOrderControlService;
 import fr.purse.payground.dto.OrderDto;
-import fr.purse.payground.dto.PaymentDto;
 import fr.purse.payground.dto.request.RequestOrderDto;
 import fr.purse.payground.dto.response.ResponseOrderDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,19 +24,18 @@ import reactor.core.publisher.Mono;
 public class OrderController {
 
     private final OrderControlService orderControlService;
-    private final PaymentControlService paymentControlService;
+    private final PaymentOrderControlService paymentOrderControlService;
 
     /**
      * Constructor
      *
-     * @param orderControlServiceParam   to control order
-     * @param paymentControlServiceParam to control payment
+     * @param orderControlServiceParam to control order
      */
     @Autowired
     public OrderController(OrderControlService orderControlServiceParam,
-                           PaymentControlService paymentControlServiceParam) {
+                           PaymentOrderControlService paymentOrderControlServiceParam) {
         this.orderControlService = orderControlServiceParam;
-        this.paymentControlService = paymentControlServiceParam;
+        this.paymentOrderControlService = paymentOrderControlServiceParam;
     }
 
     /**
@@ -48,13 +46,7 @@ public class OrderController {
      */
     @GetMapping(path = "/{orderId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseOrderDto> findOrderById(@PathVariable int orderId) {
-        Mono<OrderDto> orderDtoMono = this.orderControlService.findOrderById(orderId);
-        return orderDtoMono.flatMap(orderDto -> {
-            Mono<PaymentDto> paymentDtoMono = this.paymentControlService.findPaymentById(orderDto.getPaymentId());
-            return paymentDtoMono.map(paymentDto -> new ResponseOrderDto(orderDto.getId(), orderDto.getProductName(),
-                    orderDto.getProductReference(), orderDto.getQuantity(), orderDto.getPrice(), paymentDto));
-
-        });
+        return paymentOrderControlService.findOrderById(orderId);
     }
 
     /**

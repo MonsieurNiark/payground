@@ -1,15 +1,11 @@
 package fr.purse.payground.controller;
 
 
-import fr.purse.payground.control.OrderControlService;
-import fr.purse.payground.control.PaymentControlService;
-import fr.purse.payground.dto.OrderDto;
-import fr.purse.payground.dto.PaymentDto;
+import fr.purse.payground.control.PaymentOrderControlService;
 import fr.purse.payground.dto.request.RequestPaymentDto;
 import fr.purse.payground.dto.request.RequestUpdatePaymentStatusDto;
 import fr.purse.payground.dto.response.ResponsePaymentDto;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +14,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -29,20 +23,16 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/payment")
 public class PaymentController {
 
-    private final PaymentControlService paymentControlService;
-    private final OrderControlService orderControlService;
+    private final PaymentOrderControlService paymentOrderControlService;
 
     /**
      * Constructor
      *
-     * @param paymentControlServiceParam payment control service
-     * @param orderControlServiceParam   order control service
+     * @param paymentOrderControlServiceParam Payment order control service
      */
     @Autowired
-    public PaymentController(PaymentControlService paymentControlServiceParam,
-                             OrderControlService orderControlServiceParam) {
-        this.paymentControlService = paymentControlServiceParam;
-        this.orderControlService = orderControlServiceParam;
+    public PaymentController(PaymentOrderControlService paymentOrderControlServiceParam) {
+        this.paymentOrderControlService = paymentOrderControlServiceParam;
     }
 
     /**
@@ -53,14 +43,7 @@ public class PaymentController {
      */
     @GetMapping(path = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> findPaymentById(@PathVariable int paymentId) {
-        Mono<PaymentDto> paymentDtoMono = this.paymentControlService.findPaymentById(paymentId);
-        return paymentDtoMono.flatMap(paymentDto -> {
-            Flux<OrderDto> orderDtoFlux = orderControlService.findOrdersByPaymentId(paymentId);
-            return orderDtoFlux.collectList()
-                    .map(orderDtos -> new ResponsePaymentDto(paymentDto.getId(), paymentDto.getCurrency(),
-                            paymentDto.getStatus(), paymentDto.getPaymentMethod(), paymentDto.getAmount(), orderDtos));
-        });
-
+        return paymentOrderControlService.findPaymentById(paymentId);
     }
 
     /**
@@ -72,32 +55,7 @@ public class PaymentController {
      */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> createPayment(@RequestBody RequestPaymentDto requestPaymentDto) {
-        return Flux.fromIterable(requestPaymentDto.getOrdersId()).flatMap(orderId -> {
-            return orderControlService.findOrderById(orderId)
-                    // Check if order exists
-                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                            "Order with " + "ID " + orderId + " not found")))
-                    .flatMap(orderDto -> {
-                        // Check if order doesn't already have a payment
-                        if (orderDto.getPaymentId() != null) {
-                            return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "An order is " +
-                                    "already in payment"));
-                        }
-                        return Mono.just(orderDto);
-                    });
-        }).collectList().flatMap(orderDtoList -> {
-            // Everything is good, proceed to payment
-
-            return paymentControlService.createPayment(requestPaymentDto, orderDtoList).flatMap(paymentDto -> {
-                // Update each order with the right payment ID
-                return Flux.fromIterable(requestPaymentDto.getOrdersId())
-                        .flatMap(orderId -> orderControlService.updatePaymentId(orderId, paymentDto.getId()))
-                        .collectList()
-                        .map(updatedOrders -> new ResponsePaymentDto(paymentDto.getId(), paymentDto.getCurrency(),
-                                paymentDto.getStatus(), paymentDto.getPaymentMethod(), paymentDto.getAmount(),
-                                updatedOrders));
-            });
-        });
+        return paymentOrderControlService.createPayment(requestPaymentDto);
     }
 
 
@@ -109,18 +67,6 @@ public class PaymentController {
      */
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponsePaymentDto> updatePaymentStatus(@RequestBody RequestUpdatePaymentStatusDto requestUpdatePaymentStatusDto) {
-        return paymentControlService.findPaymentById(requestUpdatePaymentStatusDto.getPaymentId())
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found")))
-                .flatMap(paymentDto -> paymentControlService.updatePaymentStatus(requestUpdatePaymentStatusDto.getPaymentId(), requestUpdatePaymentStatusDto.getStatus())
-                        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "Error during " + "update."))))
-                .flatMap(paymentDto -> {
-                    // Retrieve orders
-                    return orderControlService.findOrdersByPaymentId(paymentDto.getId()).collectList()
-                            .map(orderDtos -> new ResponsePaymentDto(paymentDto.getId(), paymentDto.getCurrency(),
-                                    paymentDto.getStatus(), paymentDto.getPaymentMethod(), paymentDto.getAmount(),
-                                    orderDtos));
-
-                });
+        return paymentOrderControlService.updatePaymentStatus(requestUpdatePaymentStatusDto);
     }
 }
